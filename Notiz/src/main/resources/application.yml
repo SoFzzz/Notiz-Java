@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: notiz
+
+  # MongoDB Atlas
+  data:
+    mongodb:
+      uri: mongodb+srv://paulagonzalezz_db_user:9KCW0RNHvXLcF8Mh@cluster0.ecrrpg7.mongodb.net/notiz_db?retryWrites=true&w=majority
+      database: notiz_db
+
+    # Redis
+    redis:
+      host: localhost
+      port: 6379
+
+  # Jackson
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+  # Cache
+  cache:
+    type: redis
+
+  # Google OAuth2
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:placeholder}
+            client-secret: ${GOOGLE_CLIENT_SECRET:placeholder}
+            scope: openid, profile, email
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET:clave-temporal-desarrollo-cambiar-en-produccion-min-256-bits-segura}
+  expiration: 86400000       # 24 horas en ms
+  refresh-expiration: 604800000  # 7 días en ms
+
+# SendGrid
+sendgrid:
+  api-key: ${SENDGRID_API_KEY:placeholder}
+  from-address: notiz@tudominio.com
+
+# Server
+server:
+  port: 8080

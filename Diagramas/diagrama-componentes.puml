@@ -1,0 +1,68 @@
+@startuml Diagrama_Componentes_Notiz
+
+skinparam componentStyle uml2
+skinparam backgroundColor white
+skinparam defaultFontSize 12
+skinparam linetype ortho
+
+' ============================================
+'  INTERFACES PROVISTAS (izquierda)
+'  Lo que Notiz OFRECE al exterior
+' ============================================
+
+() "REST API\n(JSON/HTTPS)" as REST
+() "WebSocket\nSTOMP" as WS
+() "Reportes\nPDF/A-1a" as PDF
+() "Notificaciones\nEmail" as EMAIL
+
+' ============================================
+'  COMPONENTE PRINCIPAL
+' ============================================
+
+component "<<component>>\nNotiz" {
+
+    [Autenticacion] as Auth
+    [Calificaciones] as Grades
+    [Gestion Academica] as Academic
+    [Reportes] as Reports
+    [Comunicacion] as Comm
+    [Seguridad y Auditoria] as Security
+
+    Auth --> Grades : usuarios
+    Academic --> Grades : materias,\nmatriculas
+    Grades --> Reports : calificaciones
+    Grades --> Comm : notifica\nnueva nota
+    Security --> Auth : JWT, RBAC
+}
+
+' ============================================
+'  INTERFACES REQUERIDAS (derecha)
+'  Lo que Notiz NECESITA del exterior
+' ============================================
+
+() "MongoDB\nDriver" as MDB
+() "Redis\nClient" as RDS
+() "OAuth2\nOIDC" as GOA
+() "SendGrid\nAPI" as SG
+
+' ============================================
+'  CONEXIONES PROVISTAS
+' ============================================
+
+REST -- Auth
+WS -- Comm
+PDF -- Reports
+EMAIL -- Comm
+
+' ============================================
+'  CONEXIONES REQUERIDAS
+' ============================================
+
+Grades --( MDB
+Academic --( MDB
+Security --( MDB
+Auth --( RDS
+Auth --( GOA
+Comm --( SG
+
+@enduml
