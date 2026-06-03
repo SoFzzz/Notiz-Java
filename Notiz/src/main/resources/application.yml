@@ -15,8 +15,6 @@ spring:
 
   # Jackson
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
     default-property-inclusion: non_null
 
   # Cache
