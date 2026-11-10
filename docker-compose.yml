@@ -1,0 +1,22 @@
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: ./Notiz
+    ports:
+      - "8080:8080"
+    environment:
+      MONGO_URI: mongodb://mongo:27017/notiz
+      # Poner en true para ver que una notificación fallida no afecta a la nota
+      NOTIZ_NOTIFICACIONES_SIMULARFALLO: ${NOTIZ_NOTIFICACIONES_SIMULARFALLO:-false}
+    depends_on:
+      mongo:
+        condition: service_healthy

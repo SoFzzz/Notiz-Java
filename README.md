@@ -1,52 +1,100 @@
-# **¡Bienvenido al Proyecto Notiz (Java Version)!** 🎓🚀
+# Notiz
 
-Soy **Paula Sofía González Zambrano**, estudiante de Cuarto semestre de **Ingeniería de Software** en la **Universidad Cooperativa de Colombia (UCC)**.
+Notiz es una plataforma web de gestión académica institucional: los profesores registran calificaciones, los administradores controlan los cambios sobre periodos cerrados y cada modificación queda auditada. Proyecto integrador de Ingeniería de Software, Universidad Cooperativa de Colombia (UCC).
 
-**Notiz (Java Version)** es una especificación y plataforma web empresarial para la gestión académica institucional. Permite a los profesores registrar calificaciones dinámicas, a los estudiantes realizar consultas en tiempo real y a los administradores generar reportes de rendimiento y auditoría con los más altos estándares de rendimiento y seguridad.
+- Autora: Paula Sofía González Zambrano
+- Integrantes del trío: (completar)
 
----
+## Alcance del walking skeleton
 
-## 🛠️ Stack Tecnológico
+Este repositorio implementa **un solo flujo de punta a punta**:
 
-* **Lenguaje:** Java 21 LTS (Virtual Threads habilitados).
-* **Framework Backend:** Spring Boot 4.0.3. (Spring Web, Spring Security, Spring Cache).
-* **Persistencia NoSQL:** MongoDB Atlas (Modelo documental flexible).
-* **Base de Datos en Memoria:** Redis (Gestión de caché y blacklist de sesiones).
-* **Autenticación Federada:** Google Identity Services (OAuth2).
-* **Servicio de Notificación:** SendGrid API (Envío transaccional).
-* **Generación de Reportes:** OpenPDF (Estándar de preservación de accesibilidad PDF/A-1a).
-* **Mensajería Tiempo Real:** Spring WebSocket (Subprotocolo STOMP).
-* **Entorno de Despliegue:** Render.com (Contenedores Docker multi-stage).
+> solicitud de cambio de nota -> aprobación del administrador -> evento `NotaModificada` -> auditoría síncrona + notificación asíncrona
 
----
+Reglas incluidas: una nota solo se edita directamente si su periodo está ABIERTO y el valor está dentro de la escala; en un periodo CERRADO hay que pedir un cambio, que un administrador aprueba o rechaza. Al aprobar, la nota cambia, se guarda un registro de auditoría (si falla, la petición falla) y se envía una notificación (si falla, la nota igual queda guardada).
 
-## 🏗️ Estado Actual del Proyecto (Implementado)
+No hay login: el actor (profesor o administrador) llega en el cuerpo de la petición. Los módulos fuera de alcance (login/seguridad, foros, chat, horarios, reportes, boletines PDF, carga masiva, multitenancy real, SendGrid y Redis) viven en el tag de git `andamiaje-original`.
 
-Actualmente, el andamiaje del proyecto base ha sido **100% completado** siguiendo una arquitectura limpia (Clean Architecture) y adhiriéndose estrictamente a los diagramas UML propuestos (Diagrama de Clases y Diagrama de Desarrollo por Capas).
+## Requisitos
 
-El proyecto está estructurado bajo las siguientes capas (`src/main/java/com/notiz/`):
+- Docker Desktop (para levantar MongoDB y la aplicación)
+- Para correr las pruebas sin Docker: JDK 21 (se usa el wrapper de Maven incluido)
 
-1. **`model`**: Entidades del dominio mapeadas a documentos de MongoDB mediante herencia (clase base abstracta `BaseDocument` y `User`) y polimorfismo (`Admin`, `Professor`, `Student`, `Parent`).
-2. **`repository`**: Interfaces de acceso a datos utilizando `MongoRepository`.
-3. **`dto`**: Objetos de Transferencia de Datos para desacoplar el modelo interno de las peticiones REST, validados con `jakarta.validation`.
-4. **`service`**: Lógica de negocio (Interfaces e Implementaciones) centrada en el dominio (e.g. `ChatMessageService`, `GradeModificationRequestService`).
-5. **`controller`**: Puntos de entrada de la API REST que exponen los endpoints (`UserController`, `CommunicationController`, `ReportController`, etc.).
-6. **`security`**: Implementación de seguridad basada en tokens JWT con roles (`ROLE_ADMIN`, `ROLE_PROFESSOR`, etc.).
-7. **`exception`**: Manejo centralizado de errores globales mediante `@RestControllerAdvice`.
-8. **`config`**: Configuración de dependencias externas (MongoDB Auditing, Redis, WebSockets).
+## Ejecutar
 
----
+```bash
+docker compose up --build
+```
 
-## 🚀 Cómo ejecutar el proyecto
+La API queda en `http://localhost:8080` y MongoDB en `localhost:27017`. Al arrancar se cargan datos de demostración (escala 1.0-5.0, periodo `P1` cerrado, periodo `P2` abierto y la nota `N1` en `P1`).
 
-1. **Clonar** el repositorio y abrir en **IntelliJ IDEA**.
-2. **Cargar Maven**: Asegúrate de descargar las dependencias listadas en el `pom.xml`.
-3. **Configurar el Entorno**: Validar la configuración de `application.yml` (Asegúrate de contar con tus credenciales de MongoDB Atlas, Redis, y SendGrid).
-4. Ejecutar la clase principal `NotizApplication.java` o correr el comando:
-   ```bash
-   mvn spring-boot:run
-   ```
-5. La API estará disponible en `http://localhost:8080`.
+### Demo del flujo
 
----
-*Este proyecto es parte de la formación académica y refleja la aplicación de metodologías de diseño y arquitectura de software.*
+Con la aplicación arriba, en otra terminal:
+
+```bash
+./demo.sh      # Linux, macOS, Git Bash (usa jq si está instalado)
+./demo.ps1     # Windows PowerShell
+```
+
+El script recorre 6 pasos: nota válida (201), nota fuera de escala (400), nota en periodo cerrado (400), solicitud de cambio (PENDIENTE), aprobación (la consola muestra `[NOTIFICACION]`) y consulta de auditoría con `valorAnterior` 2.8 y el valor nuevo.
+
+### Simular una falla de notificación
+
+```bash
+NOTIZ_NOTIFICACIONES_SIMULARFALLO=true docker compose up --build
+```
+
+(En PowerShell: `$env:NOTIZ_NOTIFICACIONES_SIMULARFALLO="true"; docker compose up --build`.) La notificación registra `[NOTIFICACION] fallo simulado` y lanza una excepción, pero la nota se guarda y la auditoría se registra igual.
+
+## Pruebas
+
+No requieren MongoDB ni Docker.
+
+```bash
+cd Notiz
+./mvnw test          # Windows: mvnw.cmd test
+```
+
+Incluyen pruebas unitarias de los servicios (Mockito) y reglas de arquitectura con ArchUnit.
+
+## Endpoints
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| POST | `/api/notas` | Crea una nota `{estudianteId, materia, periodoId, valor, profesor}` (201) |
+| PUT | `/api/notas/{id}` | Edita una nota de un periodo abierto `{valor, profesor}` |
+| GET | `/api/notas[?periodoId=]` | Lista notas |
+| GET | `/api/notas/{id}` | Consulta una nota |
+| POST | `/api/notas/{id}/solicitudes` | Solicita un cambio `{valorPropuesto, justificacion, profesor}` (201, PENDIENTE) |
+| GET | `/api/solicitudes[?estado=PENDIENTE]` | Lista solicitudes |
+| POST | `/api/solicitudes/{id}/aprobar` | Aprueba `{administrador}`: aplica el cambio y publica el evento |
+| POST | `/api/solicitudes/{id}/rechazar` | Rechaza `{administrador, motivo}`: la nota no cambia |
+| GET | `/api/auditoria[?notaId=]` | Consulta los registros de auditoría |
+
+Los errores de negocio y de validación responden `400 {"error": "..."}`; los recursos inexistentes, `404`.
+
+## Estructura del código
+
+```
+Notiz/src/main/java/com/notiz/
+  NotizApplication.java
+  calificaciones/
+    presentacion/   NotaController, SolicitudController, NotaDtos, ManejadorErrores
+    negocio/        NotaService, SolicitudService, ReglasNota, DatosIniciales,
+                    NotaResultado, SolicitudResultado, ReglaNegocioException, NoEncontradoException
+      eventos/      NotaModificada
+    datos/          Nota, Periodo, EstadoPeriodo, Escala, SolicitudCambio, EstadoSolicitud + repositorios
+  auditoria/
+    presentacion/   AuditoriaController
+    negocio/        AuditoriaListener (síncrono), AuditoriaService, RegistroAuditoriaResultado
+    datos/          RegistroAuditoria (inmutable), RegistroAuditoriaRepository (solo save y lecturas)
+  notificaciones/
+    negocio/        NotificacionListener (asíncrono)
+```
+
+Regla de capas (verificada con ArchUnit): **presentacion -> negocio -> datos**, nunca hacia atrás ni saltándose una capa; los controladores no importan clases de `datos`. `auditoria` y `notificaciones` no dependen de `calificaciones.datos` ni entre sí: solo conocen el evento `NotaModificada`.
+
+## Documentación
+
+Ver [Docs/README.md](Docs/README.md).
