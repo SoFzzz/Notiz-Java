@@ -2,8 +2,7 @@
 
 Notiz es una plataforma web de gestión académica institucional: los profesores registran calificaciones, los administradores controlan los cambios sobre periodos cerrados y cada modificación queda auditada. Proyecto integrador de Ingeniería de Software, Universidad Cooperativa de Colombia (UCC).
 
-- Autora: Paula Sofía González Zambrano
-- Integrantes del trío: (completar)
+- Integrantes: Paula Sofía González, David Alejandro Aza, Stehven Alexander Obando
 
 ## Alcance del walking skeleton
 
