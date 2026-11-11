@@ -11,7 +11,7 @@
 | T5 | Índices en las consultas frecuentes | Rendimiento | Esc. 3 | Índices Mongo por `notaId` en auditoría y por estudiante/periodo en notas; no están declarados todavía en el esqueleto | Más costo en escritura y espacio; poco relevante a esta escala. |
 | T6 | Separar la regla por dependencia de datos (capas verificadas) | Modificabilidad | Hoja "escala por institución" (A, M) | `Escala` como dato por institución; `ArquitecturaTest` | Es una táctica secundaria; no es driver. |
 
-## Notas honestas
+## Limitaciones
 
 - **Rendimiento no está probado con carga en el esqueleto.** T4 y T5 son decisiones de diseño razonables, no resultados medidos. El cumplimiento de p95 <= 2 s con 300 profesores es una hipótesis hasta correr la prueba de R2.
 - T1 y T4 están en tensión: auditar cuesta latencia y rendimiento pide quitarla. Se resolvió a favor de trazabilidad (ADR-002) porque el negocio no tolera cambios sin registro.

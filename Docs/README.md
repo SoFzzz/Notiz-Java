@@ -15,7 +15,7 @@ Proyecto integrador, Arquitectura de Software, UCC Pasto. Stack: Spring Boot 4.0
 | `adr/ADR-001-monolito-modular.md` | Monolito modular vs microservicios y capas sin módulos. |
 | `adr/ADR-002-auditoria-sincrona.md` | Auditoría síncrona vs asíncrona. |
 | `adr/ADR-003-eventos-en-memoria.md` | Eventos en memoria vs broker. |
-| `06-riesgos.md` | Riesgos y qué verificar para descartarlos. |
+| `06-riesgos.md` | Riesgos y verificación prevista. |
 
 ## Matriz de trazabilidad
 
