@@ -1,5 +1,7 @@
 package com.notiz;
 
+import static com.tngtech.archunit.base.DescribedPredicate.not;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
@@ -39,4 +41,13 @@ class ArquitecturaTest {
     @ArchTest
     static final ArchRule datosNoDependeDeSpringWeb = noClasses().that().resideInAPackage("..datos..")
             .should().dependOnClassesThat().resideInAPackage("org.springframework.web..");
+
+    @ArchTest
+    static final ArchRule notificacionesSoloConoceElEvento = noClasses().that().resideInAPackage("..notificaciones..")
+            .should().dependOnClassesThat(
+                    resideInAPackage("..calificaciones..").and(not(resideInAPackage("..calificaciones.negocio.eventos.."))));
+
+    @ArchTest
+    static final ArchRule controladoresNoUsanDatos = noClasses().that().resideInAPackage("..presentacion..")
+            .should().dependOnClassesThat().resideInAPackage("..datos..");
 }

@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notiz · panel de demostración</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --papel: #FAF4E8;
+    --panel: #F3EAD8;
+    --panel-2: #EBDFC6;
+    --linea: #D9CAAE;
+    --tinta: #2A1F17;
+    --tinta-2: #554839;
+    --terracota: #B0431F;
+    --terracota-osc: #8E3316;
+    --ambar: #F2C672;
+    --ok: #2F7D3F;
+    --ok-fondo: #CFEBC9;
+    --ok-texto: #1F5F2D;
+    --error: #C23B2E;
+    --error-fondo: #FAD1CB;
+    --error-texto: #9E2B20;
+    --aviso-texto: #6B4A0B;
+    --fuente: "Bricolage Grotesque", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", Consolas, "Cascadia Mono", ui-monospace, "Courier New", monospace;
+    --salida: cubic-bezier(0.16, 1, 0.3, 1);
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html { font-size: 16px; }
+  @media (min-width: 1800px) { html { font-size: 18px; } }
+  @media (max-width: 1100px) { html { font-size: 15px; } }
+
+  body {
+    margin: 0;
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: var(--fuente);
+    font-size: 1rem;
+    line-height: 1.4;
+    caret-color: var(--terracota);
+    scrollbar-color: var(--linea) transparent;
+  }
+  ::selection { background: var(--ambar); color: var(--tinta); }
+  button, input, select, summary { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--terracota); outline-offset: 2px; border-radius: 4px; }
+  .solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* ---------- estructura ---------- */
+  .pagina { display: flex; flex-direction: column; min-height: 100vh; }
+  @media (min-width: 1500px) and (min-height: 700px) {
+    .pagina { height: 100vh; }
+    .principal { min-height: 0; }
+  }
+
+  .banner-fallo {
+    background: var(--error-fondo);
+    color: var(--error-texto);
+    border-bottom: 2px solid var(--error);
+    padding: 0.55rem 1.5rem;
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+  .banner-fallo[hidden] { display: none; }
+
+  header.cabecera {
+    padding: 0.9rem 1.5rem 0.8rem;
+    border-bottom: 1px solid var(--linea);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 2rem;
+  }
+  h1 { margin: 0; font-size: 1.7rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; }
+  h1 .marca { color: var(--terracota); }
+  .flujo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.35rem; margin: 0; padding: 0; list-style: none; font-size: 0.95rem; }
+  .flujo li { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .flujo .paso { background: var(--panel); border: 1px solid var(--linea); border-radius: 999px; padding: 0.15rem 0.7rem; font-weight: 600; white-space: nowrap; }
+  .flujo .evento { background: var(--terracota); border-color: var(--terracota); color: var(--papel); font-family: var(--mono); font-size: 0.88rem; }
+  .flujo .sync { background: var(--ok-fondo); border-color: var(--ok); color: var(--ok-texto); }
+  .flujo .async { background: var(--ambar); border-color: #C99A3A; color: var(--tinta); }
+  .flujo svg { width: 1rem; height: 1rem; color: var(--tinta-2); flex: none; }
+  .flujo .mas { font-weight: 700; color: var(--tinta-2); padding: 0 0.1rem; }
+  .estado-api { margin-left: auto; font-size: 0.85rem; color: var(--tinta-2); display: inline-flex; align-items: center; gap: 0.4rem; }
+  .punto { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--ok); }
+  .punto.caido { background: var(--error); }
+
+  .principal {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(20rem, 22rem) minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1rem 1.5rem 1.25rem;
+  }
+  @media (min-width: 1800px) { .principal { grid-template-columns: 26rem minmax(0, 1fr); } }
+  @media (max-width: 1000px) { .principal { grid-template-columns: 1fr; } }
+
+  .col-izq { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; overflow: auto; padding-right: 0.15rem; }
+  .col-der { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 1rem; min-height: 0; min-width: 0; }
+
+  h2 { margin: 0; font-size: 1.15rem; font-weight: 700; }
+  .panel { background: var(--panel); border: 1px solid var(--linea); border-radius: 10px; }
+
+  /* ---------- pasos ---------- */
+  .pasos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  .btn-paso {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 2.3rem 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: left;
+    background: var(--panel);
+    border: 1px solid var(--linea);
+    border-radius: 10px;
+    padding: 0.8rem 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.18s var(--salida), border-color 0.18s var(--salida), transform 0.18s var(--salida);
+  }
+  @media (max-width: 1499px) { .btn-paso { padding: 0.45rem 0.7rem; } .btn-paso .sub { font-size: 0.82rem; } }
+  .btn-paso:hover { background: var(--panel-2); border-color: var(--terracota); }
+  .btn-paso:active { transform: translateY(1px); }
+  .btn-paso:disabled { cursor: progress; opacity: 0.7; }
+  .btn-paso.activo { border-color: var(--terracota); background: var(--panel-2); }
+  .num {
+    width: 2.3rem; height: 2.3rem; border-radius: 50%;
+    background: var(--terracota); color: var(--papel);
+    display: grid; place-items: center; font-weight: 800; font-size: 1.15rem;
+  }
+  .btn-paso .titulo { display: block; font-weight: 700; font-size: 1.05rem; line-height: 1.2; }
+  .btn-paso .sub { display: block; color: var(--tinta-2); font-size: 0.88rem; margin-top: 0.1rem; }
+  .chip {
+    min-width: 2.9rem; text-align: center; padding: 0.1rem 0.5rem; border-radius: 6px;
+    font-family: var(--mono); font-weight: 600; font-size: 0.9rem; font-variant-numeric: tabular-nums;
+    background: transparent; color: var(--tinta-2); border: 1px dashed var(--linea);
+  }
+  .chip.ok { background: var(--ok-fondo); color: var(--ok-texto); border: 1px solid var(--ok); }
+  .chip.error { background: var(--error-fondo); color: var(--error-texto); border: 1px solid var(--error); }
+  .chip.aviso { background: var(--ambar); color: var(--tinta); border: 1px solid #C99A3A; }
+
+  .btn-secundario {
+    background: transparent; border: 1.5px solid var(--tinta-2); color: var(--tinta);
+    border-radius: 8px; padding: 0.45rem 0.9rem; font-weight: 600; cursor: pointer;
+    transition: background-color 0.18s var(--salida);
+  }
+  .btn-secundario:hover { background: var(--panel-2); }
+  .btn-secundario:disabled { opacity: 0.6; cursor: progress; }
+  .btn-primario {
+    background: var(--terracota); color: var(--papel); border: 0; border-radius: 8px;
+    padding: 0.5rem 1rem; font-weight: 700; cursor: pointer;
+    transition: background-color 0.18s var(--salida);
+  }
+  .btn-primario:hover { background: var(--terracota-osc); }
+  .btn-primario:disabled { opacity: 0.6; cursor: progress; }
+
+  /* ---------- interruptor ---------- */
+  .control { padding: 0.75rem 0.9rem; }
+  .control-fila { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+  .control label { font-weight: 700; font-size: 1.05rem; }
+  .control p { margin: 0.35rem 0 0; color: var(--tinta-2); font-size: 0.9rem; }
+  .interruptor {
+    flex: none; width: 3.6rem; height: 2rem; border-radius: 999px; position: relative; cursor: pointer;
+    background: var(--panel-2); border: 2px solid var(--tinta-2);
+    transition: background-color 0.2s var(--salida), border-color 0.2s var(--salida);
+  }
+  .interruptor::after {
+    content: ""; position: absolute; top: 0.18rem; left: 0.2rem; width: 1.3rem; height: 1.3rem; border-radius: 50%;
+    background: var(--tinta-2); transition: transform 0.2s var(--salida), background-color 0.2s var(--salida);
+  }
+  .interruptor[aria-checked="true"] { background: var(--error); border-color: var(--error-texto); }
+  .interruptor[aria-checked="true"]::after { transform: translateX(1.5rem); background: var(--papel); }
+  .interruptor:disabled { opacity: 0.6; cursor: progress; }
+
+  details.formulario { padding: 0.1rem 0.9rem; }
+  details.formulario summary { cursor: pointer; padding: 0.6rem 0; font-weight: 700; }
+  details.formulario form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 0.6rem; padding-bottom: 0.8rem; }
+  details.formulario label { display: grid; gap: 0.15rem; font-size: 0.85rem; font-weight: 600; color: var(--tinta-2); }
+  details.formulario input, details.formulario select {
+    background: var(--papel); border: 1px solid var(--tinta-2); border-radius: 6px; padding: 0.35rem 0.5rem; color: var(--tinta);
+    accent-color: var(--terracota);
+  }
+  details.formulario .ancho { grid-column: 1 / -1; }
+
+  /* ---------- tarjeta de resultado ---------- */
+  .resultado { min-height: 10.5rem; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 1.25rem; padding: 0.9rem 1.1rem; align-items: start; }
+  .resultado.ok { background: var(--ok-fondo); border-color: var(--ok); }
+  .resultado.error { background: var(--error-fondo); border-color: var(--error); }
+  .resultado.aviso { background: #FBE9C2; border-color: #C99A3A; }
+  .resultado.vacio { background: var(--panel); }
+  .estado-http { min-width: 7.5rem; text-align: center; }
+  .estado-http .codigo { display: block; font-size: 4.2rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .estado-http .leyenda { display: block; font-weight: 700; font-size: 1rem; margin-top: 0.15rem; }
+  .ok .estado-http { color: var(--ok-texto); }
+  .error .estado-http { color: var(--error-texto); }
+  .aviso .estado-http { color: var(--aviso-texto); }
+  .resultado .cuerpo { min-width: 0; }
+  .resultado .paso-nombre { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--tinta-2); }
+  .resultado .mensaje { margin: 0.1rem 0 0.35rem; font-size: 1.45rem; font-weight: 700; line-height: 1.25; }
+  .resultado .peticion { font-family: var(--mono); font-size: 0.85rem; color: var(--tinta-2); margin: 0; }
+  .resultado details { margin-top: 0.4rem; }
+  .resultado summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; width: fit-content; }
+  .resultado pre {
+    margin: 0.4rem 0 0; max-height: 9rem; overflow: auto; background: var(--papel); border: 1px solid var(--linea);
+    border-radius: 6px; padding: 0.5rem 0.7rem; font-family: var(--mono); font-size: 0.82rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word;
+  }
+  .resultado.vacio { align-items: center; }
+  .resultado.vacio .mensaje { font-size: 1.2rem; color: var(--tinta-2); font-weight: 600; margin: 0; }
+
+  /* ---------- tablas ---------- */
+  .tablas { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; min-height: 0; }
+  @media (max-width: 1500px) { .tablas { grid-template-columns: 1fr; grid-template-rows: none; } }
+  .tabla-panel { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+  .tabla-cab { padding: 0.55rem 0.9rem 0.45rem; border-bottom: 1px solid var(--linea); display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+  .tabla-cab .nota { color: var(--tinta-2); font-size: 0.85rem; }
+  .tabla-cab .cuenta { margin-left: auto; font-family: var(--mono); font-size: 0.85rem; color: var(--tinta-2); }
+  .tabla-cuerpo { overflow: auto; min-height: 7rem; max-height: 14rem; flex: 1; }
+  @media (min-width: 1500px) and (min-height: 700px) { .tabla-cuerpo { max-height: none; } }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+  th { position: sticky; top: 0; background: var(--panel-2); text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--tinta-2); padding: 0.35rem 0.6rem; font-weight: 700; z-index: 1; }
+  td { padding: 0.4rem 0.6rem; border-top: 1px solid var(--linea); vertical-align: middle; }
+  td.mono, th.mono { font-family: var(--mono); font-size: 0.85rem; white-space: nowrap; }
+  td.recorte { max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.num-d { text-align: right; font-weight: 700; white-space: nowrap; }
+  td.sin-corte { white-space: nowrap; }
+  .vacio-fila { color: var(--tinta-2); padding: 1rem 0.9rem; font-size: 0.95rem; }
+  tr.nueva td { animation: resalte 2.6s var(--salida) 1; }
+  @keyframes resalte { from { background: var(--ambar); } to { background: transparent; } }
+  tr.nueva-estatica td { background: var(--ambar); }
+
+  .badge { display: inline-block; padding: 0.05rem 0.55rem; border-radius: 6px; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.02em; border: 1px solid transparent; white-space: nowrap; }
+  .badge.PENDIENTE, .badge.CERRADO { background: var(--ambar); color: var(--tinta); border-color: #C99A3A; }
+  .badge.APROBADA, .badge.ENVIADA, .badge.ABIERTO { background: var(--ok-fondo); color: var(--ok-texto); border-color: var(--ok); }
+  .badge.RECHAZADA, .badge.FALLIDA { background: var(--error-fondo); color: var(--error-texto); border-color: var(--error); }
+  .flecha-valor { color: var(--tinta-2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="flecha" viewBox="0 0 16 16"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<div class="pagina">
+  <div id="banner" class="banner-fallo" role="status" hidden>Simulación de fallo ACTIVA: la notificación va a fallar. La nota y la auditoría se guardan igual.</div>
+
+  <header class="cabecera">
+    <h1><span class="marca">Notiz</span> · panel de demostración</h1>
+    <ol class="flujo" aria-label="Flujo del sistema">
+      <li><span class="paso">profesor</span></li>
+      <li><svg aria-hidden="true"><use href="#flecha"/></svg><span class="paso">reglas</span></li>
+      <li><svg aria-hidden="true"><use href="#flecha"/></svg><span class="paso">solicitud</span></li>
+      <li><svg aria-hidden="true"><use href="#flecha"/></svg><span class="paso">aprobación</span></li>
+      <li><svg aria-hidden="true"><use href="#flecha"/></svg><span class="paso evento">NotaModificada</span></li>
+      <li><svg aria-hidden="true"><use href="#flecha"/></svg><span class="paso sync">auditoría (síncrona)</span><span class="mas">+</span><span class="paso async">notificación (asíncrona)</span></li>
+    </ol>
+    <span class="estado-api" id="estado-api"><span class="punto" id="punto"></span><span id="estado-texto">Conectando…</span></span>
+  </header>
+
+  <main class="principal">
+    <section class="col-izq" aria-label="Pasos guiados">
+      <h2>Pasos de la demostración</h2>
+      <ol class="pasos" id="pasos"></ol>
+      <div><button type="button" class="btn-secundario" id="btn-rechazar">Rechazar la solicitud pendiente de N1</button></div>
+
+      <div class="panel control">
+        <div class="control-fila">
+          <label for="interruptor" id="etq-fallo">Simular fallo de notificación</label>
+          <button type="button" role="switch" aria-checked="false" id="interruptor" class="interruptor" aria-labelledby="etq-fallo"></button>
+        </div>
+        <p>Con el fallo activo, el paso 5 sigue respondiendo bien: la nota y la auditoría se guardan y la notificación queda FALLIDA.</p>
+      </div>
+
+      <details class="panel formulario">
+        <summary>Crear una nota con valores propios</summary>
+        <form id="form-nota" autocomplete="off">
+          <label>Estudiante<input name="estudianteId" value="EST-003" required></label>
+          <label>Materia<input name="materia" value="Química" required></label>
+          <label>Periodo<select name="periodoId" id="sel-periodo" required></select></label>
+          <label>Valor<input name="valor" type="number" step="0.1" value="3.5" required></label>
+          <label class="ancho">Profesor<input name="profesor" value="prof.ramirez" required></label>
+          <div class="ancho"><button type="submit" class="btn-primario">Crear nota</button></div>
+        </form>
+      </details>
+    </section>
+
+    <section class="col-der" aria-label="Resultado y estado en vivo">
+      <div id="resultado" class="panel resultado vacio" role="status" aria-live="polite" aria-atomic="true">
+        <div class="cuerpo" style="grid-column:1 / -1">
+          <p class="mensaje">Pulse un paso para ejecutarlo. El resultado aparece aquí y las tablas se actualizan solas.</p>
+        </div>
+      </div>
+
+      <div class="tablas">
+        <section class="panel tabla-panel" aria-labelledby="t-notas">
+          <div class="tabla-cab"><h2 id="t-notas">Notas</h2><span class="cuenta" id="c-notas"></span></div>
+          <div class="tabla-cuerpo"><table><thead><tr><th>Id</th><th>Estudiante</th><th>Materia</th><th>Periodo</th><th>Valor</th><th>Último autor</th></tr></thead><tbody id="b-notas"></tbody></table></div>
+        </section>
+        <section class="panel tabla-panel" aria-labelledby="t-solicitudes">
+          <div class="tabla-cab"><h2 id="t-solicitudes">Solicitudes de cambio</h2><span class="cuenta" id="c-solicitudes"></span></div>
+          <div class="tabla-cuerpo"><table><thead><tr><th>Id</th><th>Nota</th><th>Propuesto</th><th>Estado</th><th>Solicitante</th><th>Revisor</th></tr></thead><tbody id="b-solicitudes"></tbody></table></div>
+        </section>
+        <section class="panel tabla-panel" aria-labelledby="t-auditoria">
+          <div class="tabla-cab"><h2 id="t-auditoria">Auditoría</h2><span class="nota">síncrona: se guarda dentro de la misma petición</span><span class="cuenta" id="c-auditoria"></span></div>
+          <div class="tabla-cuerpo"><table><thead><tr><th>Hora</th><th>Nota</th><th>Cambio</th><th>Autor</th><th>Motivo</th></tr></thead><tbody id="b-auditoria"></tbody></table></div>
+        </section>
+        <section class="panel tabla-panel" aria-labelledby="t-notificaciones">
+          <div class="tabla-cab"><h2 id="t-notificaciones">Notificaciones</h2><span class="nota">asíncrona: corre en otro hilo</span><span class="cuenta" id="c-notificaciones"></span></div>
+          <div class="tabla-cuerpo"><table><thead><tr><th>Hora</th><th>Hilo</th><th>Estado</th><th>Mensaje</th></tr></thead><tbody id="b-notificaciones"></tbody></table></div>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var ADMIN = 'admin.lopez';
+  var PROFESOR = 'prof.ramirez';
+  var simulando = false;
+  var ocupado = false;
+  var periodos = [];
+
+  /* ---------- utilidades ---------- */
+  function el(tag, attrs, hijos) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === 'class') n.className = attrs[k];
+      else if (k === 'text') n.textContent = attrs[k];
+      else n.setAttribute(k, attrs[k]);
+    });
+    (hijos || []).forEach(function (h) { if (h != null) n.appendChild(typeof h === 'string' ? document.createTextNode(h) : h); });
+    return n;
+  }
+  function $(id) { return document.getElementById(id); }
+  function num(v) { return (v === null || v === undefined) ? '—' : Number(v).toFixed(1); }
+  function fecha(v) {
+    if (v === null || v === undefined) return '—';
+    var d = new Date(typeof v === 'number' ? (v < 1e11 ? v * 1000 : v) : v);
+    if (isNaN(d)) return String(v);
+    return d.toLocaleTimeString('es-CO', { hour12: false });
+  }
+  function ms(v) {
+    if (v === null || v === undefined) return 0;
+    var d = new Date(typeof v === 'number' ? (v < 1e11 ? v * 1000 : v) : v);
+    return isNaN(d) ? 0 : d.getTime();
+  }
+  function corto(id) { return id && id.length > 8 ? '…' + id.slice(-5) : (id || '—'); }
+
+  function api(metodo, ruta, cuerpo) {
+    var opts = { method: metodo, headers: { 'Accept': 'application/json' } };
+    if (cuerpo !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(cuerpo); }
+    return fetch(ruta, opts).then(function (r) {
+      return r.text().then(function (t) {
+        var datos = null;
+        try { datos = t ? JSON.parse(t) : null; } catch (e) { datos = t; }
+        return { estado: r.status, ok: r.ok, datos: datos, metodo: metodo, ruta: ruta, cuerpo: cuerpo };
+      });
+    });
+  }
+
+  function idPeriodo(nombre, respaldo) {
+    var p = periodos.filter(function (x) { return x.nombre === nombre; })[0];
+    return p ? p.id : respaldo;
+  }
+  function nombrePeriodo(id) {
+    var p = periodos.filter(function (x) { return x.id === id; })[0];
+    return p ? p.nombre : id;
+  }
+
+  /* ---------- tarjeta de resultado ---------- */
+  var LEYENDAS = { 200: 'Correcto', 201: 'Creado', 400: 'Rechazado', 404: 'No encontrado', 500: 'Error del servidor' };
+
+  function mostrar(tipo, codigo, leyenda, paso, mensaje, peticion, json) {
+    var cont = $('resultado');
+    cont.className = 'panel resultado ' + tipo;
+    cont.textContent = '';
+    cont.appendChild(el('div', { class: 'estado-http' }, [
+      el('span', { class: 'codigo', text: String(codigo) }),
+      el('span', { class: 'leyenda', text: leyenda })
+    ]));
+    var cuerpo = el('div', { class: 'cuerpo' }, [
+      el('p', { class: 'paso-nombre', text: paso }),
+      el('p', { class: 'mensaje', text: mensaje })
+    ]);
+    if (peticion) cuerpo.appendChild(el('p', { class: 'peticion', text: peticion }));
+    if (json !== undefined) {
+      cuerpo.appendChild(el('details', null, [
+        el('summary', { text: 'Ver JSON' }),
+        el('pre', { text: typeof json === 'string' ? json : JSON.stringify(json, null, 2) })
+      ]));
+    }
+    cont.appendChild(cuerpo);
+  }
+
+  function mostrarRespuesta(paso, r, resumenOk, jsonExtra) {
+    var peticion = r.metodo + ' ' + r.ruta;
+    var json = jsonExtra !== undefined ? jsonExtra : r.datos;
+    if (r.ok) {
+      mostrar('ok', r.estado, LEYENDAS[r.estado] || 'Correcto', paso, resumenOk, peticion, json);
+    } else {
+      var msg = (r.datos && r.datos.error) ? r.datos.error : 'La API respondió con un error.';
+      mostrar('error', r.estado, LEYENDAS[r.estado] || 'Error', paso, msg, peticion, json);
+    }
+  }
+
+  function mostrarAviso(paso, mensaje) {
+    mostrar('aviso', '!', 'Falta un paso', paso, mensaje, null, undefined);
+  }
+
+  function mostrarSinConexion(paso) {
+    mostrar('error', '—', 'Sin conexión', paso, 'No se pudo contactar a la API. Verifique que la aplicación esté arriba.', null, undefined);
+  }
+
+  /* ---------- pasos guiados ---------- */
+  function ultimaPendiente(notaId) {
+    return api('GET', '/api/solicitudes?estado=PENDIENTE').then(function (r) {
+      var lista = Array.isArray(r.datos) ? r.datos : [];
+      return lista.filter(function (s) { return s.notaId === notaId; })
+        .sort(function (a, b) { return ms(b.fechaCreacion) - ms(a.fechaCreacion); })[0] || null;
+    });
+  }
+
+  var PASOS = [
+    { titulo: 'Crear nota válida', sub: '2026-P2, valor 4.2 · espera 201',
+      ejecutar: function (nombre) {
+        return api('POST', '/api/notas', { estudianteId: 'EST-002', materia: 'Física', periodoId: idPeriodo('2026-P2', 'P2'), valor: 4.2, profesor: PROFESOR })
+          .then(function (r) {
+            mostrarRespuesta(nombre, r, r.ok ? 'Nota creada: ' + r.datos.estudianteId + ' · ' + r.datos.materia + ' · ' + num(r.datos.valor) + ' en ' + nombrePeriodo(r.datos.periodoId) + '.' : '');
+            return r;
+          });
+      } },
+    { titulo: 'Valor 7 fuera de escala', sub: 'Escala 1.0–5.0 · espera 400',
+      ejecutar: function (nombre) {
+        return api('POST', '/api/notas', { estudianteId: 'EST-002', materia: 'Física', periodoId: idPeriodo('2026-P2', 'P2'), valor: 7, profesor: PROFESOR })
+          .then(function (r) { mostrarRespuesta(nombre, r, 'La nota se creó, pero debía rechazarse.'); return r; });
+      } },
+    { titulo: 'Nota en periodo cerrado', sub: '2026-P1 · espera 400',
+      ejecutar: function (nombre) {
+        return api('POST', '/api/notas', { estudianteId: 'EST-002', materia: 'Física', periodoId: idPeriodo('2026-P1', 'P1'), valor: 4, profesor: PROFESOR })
+          .then(function (r) { mostrarRespuesta(nombre, r, 'La nota se creó, pero debía rechazarse.'); return r; });
+      } },
+    { titulo: 'Solicitar cambio de N1 a 4.0', sub: 'Con justificación · queda PENDIENTE',
+      ejecutar: function (nombre) {
+        return api('GET', '/api/notas/N1').then(function (n) {
+          var actual = n.ok ? n.datos.valor : null;
+          var propuesto = actual === 4.0 ? 4.5 : 4.0;
+          return api('POST', '/api/notas/N1/solicitudes', { valorPropuesto: propuesto, justificacion: 'Error de digitación en el acta', profesor: PROFESOR })
+            .then(function (r) {
+              mostrarRespuesta(nombre, r, r.ok ? 'Solicitud ' + r.datos.estado + ': N1 de ' + num(actual) + ' a ' + num(r.datos.valorPropuesto) + (propuesto !== 4.0 ? ' (N1 ya valía 4.0).' : '.') : '');
+              return r;
+            });
+        });
+      } },
+    { titulo: 'Aprobar como administrador', sub: 'La nota cambia · APROBADA',
+      ejecutar: function (nombre) {
+        return ultimaPendiente('N1').then(function (s) {
+          if (!s) { mostrarAviso(nombre, 'No hay una solicitud PENDIENTE para N1. Primero haga el paso 4.'); return { estado: 'aviso' }; }
+          return api('GET', '/api/notas/N1').then(function (antes) {
+            return api('POST', '/api/solicitudes/' + s.id + '/aprobar', { administrador: ADMIN }).then(function (r) {
+              if (!r.ok) { mostrarRespuesta(nombre, r, ''); return r; }
+              var anterior = antes.ok ? antes.datos.valor : null;
+              var texto = 'Solicitud APROBADA: N1 pasó de ' + num(anterior) + ' a ' + num(r.datos.valorPropuesto) + '.';
+              if (simulando) texto += ' La notificación falló (simulada), pero la nota y la auditoría quedaron guardadas.';
+              mostrarRespuesta(nombre, r, texto);
+              return r;
+            });
+          });
+        });
+      } },
+    { titulo: 'Ver auditoría de N1', sub: 'Anterior → nuevo, autor y motivo',
+      ejecutar: function (nombre) {
+        return api('GET', '/api/auditoria?notaId=N1').then(function (r) {
+          var lista = Array.isArray(r.datos) ? r.datos.slice().sort(function (a, b) { return ms(b.fecha) - ms(a.fecha); }) : [];
+          var resumen = lista.length
+            ? lista.length + ' registro(s). El último: ' + num(lista[0].valorAnterior) + ' → ' + num(lista[0].valorNuevo) + ' por ' + lista[0].autor + '.'
+            : 'N1 todavía no tiene registros de auditoría. Apruebe un cambio en el paso 5.';
+          mostrarRespuesta(nombre, r, resumen);
+          return r;
+        });
+      } }
+  ];
+
+  function construirPasos() {
+    var ol = $('pasos');
+    PASOS.forEach(function (p, i) {
+      var chip = el('span', { class: 'chip', id: 'chip-' + i, text: '—' });
+      var btn = el('button', { type: 'button', class: 'btn-paso', id: 'paso-' + i }, [
+        el('span', { class: 'num', text: String(i + 1), 'aria-hidden': 'true' }),
+        el('span', null, [el('span', { class: 'titulo', text: p.titulo }), el('span', { class: 'sub', text: p.sub })]),
+        chip
+      ]);
+      btn.addEventListener('click', function () { correr(i, btn); });
+      ol.appendChild(el('li', null, [btn]));
+    });
+  }
+
+  function bloquear(si) {
+    ocupado = si;
+    var botones = document.querySelectorAll('.btn-paso, #btn-rechazar, #form-nota button[type=submit]');
+    Array.prototype.forEach.call(botones, function (b) { b.disabled = si; });
+    $('resultado').setAttribute('aria-busy', si ? 'true' : 'false');
+  }
+
+  function marcarChip(i, r) {
+    var chip = $('chip-' + i);
+    var tipo = r && r.estado === 'aviso' ? 'aviso' : (r && r.ok ? 'ok' : 'error');
+    chip.className = 'chip ' + tipo;
+    chip.textContent = r && r.estado === 'aviso' ? 'falta 4' : String(r ? r.estado : '—');
+  }
+
+  function correr(i, btn) {
+    if (ocupado) return;
+    bloquear(true);
+    Array.prototype.forEach.call(document.querySelectorAll('.btn-paso'), function (b) { b.classList.remove('activo'); });
+    btn.classList.add('activo');
+    var nombre = 'Paso ' + (i + 1) + ' · ' + PASOS[i].titulo;
+    PASOS[i].ejecutar(nombre).then(function (r) { marcarChip(i, r); })
+      .catch(function () { mostrarSinConexion(nombre); $('chip-' + i).className = 'chip error'; $('chip-' + i).textContent = 'red'; })
+      .then(function () { bloquear(false); return refrescar(); });
+  }
+
+  $('btn-rechazar').addEventListener('click', function () {
+    if (ocupado) return;
+    bloquear(true);
+    var nombre = 'Rechazar solicitud pendiente de N1';
+    ultimaPendiente('N1').then(function (s) {
+      if (!s) { mostrarAviso(nombre, 'No hay una solicitud PENDIENTE para N1. Primero haga el paso 4.'); return; }
+      return api('POST', '/api/solicitudes/' + s.id + '/rechazar', { administrador: ADMIN, motivo: 'No procede el cambio solicitado' }).then(function (r) {
+        mostrarRespuesta(nombre, r, r.ok ? 'Solicitud RECHAZADA: la nota N1 no cambió.' : '');
+      });
+    }).catch(function () { mostrarSinConexion(nombre); })
+      .then(function () { bloquear(false); return refrescar(); });
+  });
+
+  $('form-nota').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (ocupado) return;
+    var f = ev.target;
+    var cuerpo = {
+      estudianteId: f.estudianteId.value.trim(), materia: f.materia.value.trim(),
+      periodoId: f.periodoId.value, valor: parseFloat(f.valor.value), profesor: f.profesor.value.trim()
+    };
+    bloquear(true);
+    var nombre = 'Nota con valores propios';
+    api('POST', '/api/notas', cuerpo).then(function (r) {
+      mostrarRespuesta(nombre, r, r.ok ? 'Nota creada: ' + r.datos.estudianteId + ' · ' + r.datos.materia + ' · ' + num(r.datos.valor) + ' en ' + nombrePeriodo(r.datos.periodoId) + '.' : '');
+    }).catch(function () { mostrarSinConexion(nombre); })
+      .then(function () { bloquear(false); return refrescar(); });
+  });
+
+  /* ---------- interruptor de fallo ---------- */
+  function pintarFallo(activo) {
+    simulando = activo;
+    $('interruptor').setAttribute('aria-checked', activo ? 'true' : 'false');
+    $('banner').hidden = !activo;
+  }
+  $('interruptor').addEventListener('click', function () {
+    var btn = this;
+    var nuevo = btn.getAttribute('aria-checked') !== 'true';
+    btn.disabled = true;
+    api('PUT', '/api/notificaciones/simular-fallo', { activo: nuevo }).then(function (r) {
+      if (r.ok) pintarFallo(!!r.datos.activo);
+    }).catch(function () {}).then(function () { btn.disabled = false; });
+  });
+
+  /* ---------- tablas en vivo ---------- */
+  var vistos = {};      // por tabla: claves ya mostradas
+  var primera = {};     // por tabla: ya se cargó una vez
+  var huella = {};      // por tabla: contenido anterior (evita repintar sin cambios)
+
+  function pintarTabla(nombre, filas, columnas, vacio) {
+    var firma = JSON.stringify(filas.map(function (f) { return f.clave; }));
+    $('c-' + nombre).textContent = filas.length + (filas.length === 1 ? ' fila' : ' filas');
+    if (huella[nombre] === firma) return;
+    huella[nombre] = firma;
+    var cuerpo = $('b-' + nombre);
+    cuerpo.textContent = '';
+    var conocidos = vistos[nombre] || (vistos[nombre] = {});
+    if (!filas.length) {
+      var tr0 = el('tr', null, [el('td', { class: 'vacio-fila', colspan: String(columnas), text: vacio })]);
+      cuerpo.appendChild(tr0);
+    }
+    var reducir = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    filas.forEach(function (f) {
+      var tr = f.tr;
+      if (primera[nombre] && !conocidos[f.clave]) {
+        var clase = reducir ? 'nueva-estatica' : 'nueva';
+        tr.className = clase;
+        setTimeout(function () { tr.classList.remove(clase); }, 2700);
+      }
+      conocidos[f.clave] = true;
+      cuerpo.appendChild(tr);
+    });
+    primera[nombre] = true;
+  }
+
+  function celda(texto, clase, titulo) {
+    var td = el('td', { text: texto == null ? '' : String(texto) });
+    if (clase) td.className = clase;
+    if (titulo) td.title = titulo;
+    return td;
+  }
+  function celdaBadge(valor) {
+    return el('td', null, [el('span', { class: 'badge ' + valor, text: valor })]);
+  }
+
+  function tablaNotas(lista) {
+    var filas = lista.slice().sort(function (a, b) { return ms(b.actualizada) - ms(a.actualizada); }).map(function (n) {
+      var per = periodos.filter(function (p) { return p.id === n.periodoId; })[0];
+      var tdPer = el('td', { class: 'sin-corte' }, [document.createTextNode((per ? per.nombre : n.periodoId) + ' '), per ? el('span', { class: 'badge ' + per.estado, text: per.estado }) : null]);
+      var tr = el('tr', null, [celda(corto(n.id), 'mono', n.id), celda(n.estudianteId), celda(n.materia), tdPer, celda(num(n.valor), 'num-d'), celda(n.autor)]);
+      return { clave: n.id + '|' + n.valor + '|' + n.autor + '|' + n.actualizada, tr: tr };
+    });
+    pintarTabla('notas', filas, 6, 'Todavía no hay notas.');
+  }
+
+  function tablaSolicitudes(lista) {
+    var filas = lista.slice().sort(function (a, b) { return ms(b.fechaCreacion) - ms(a.fechaCreacion); }).map(function (s) {
+      var tr = el('tr', null, [celda(corto(s.id), 'mono', s.id), celda(s.notaId, 'mono'), celda(num(s.valorPropuesto), 'num-d', s.justificacion), celdaBadge(s.estado), celda(s.solicitante), celda(s.revisor || '—')]);
+      return { clave: s.id + '|' + s.estado, tr: tr };
+    });
+    pintarTabla('solicitudes', filas, 6, 'Sin solicitudes: use el paso 4.');
+  }
+
+  function tablaAuditoria(lista) {
+    var filas = lista.slice().sort(function (a, b) { return ms(b.fecha) - ms(a.fecha); }).map(function (a) {
+      var cambio = el('td', { class: 'num-d' }, [num(a.valorAnterior) + ' ', el('span', { class: 'flecha-valor', text: '→' }), ' ' + num(a.valorNuevo)]);
+      var tr = el('tr', null, [celda(fecha(a.fecha), 'mono'), celda(corto(a.notaId), 'mono', a.notaId), cambio, celda(a.autor), celda(a.motivo, 'recorte', a.motivo)]);
+      return { clave: a.id, tr: tr };
+    });
+    pintarTabla('auditoria', filas, 5, 'Sin registros: apruebe un cambio (paso 5).');
+  }
+
+  function tablaNotificaciones(lista) {
+    var filas = lista.map(function (n) {
+      var tr = el('tr', null, [celda(fecha(n.fecha), 'mono'), celda(n.hilo, 'mono'), celdaBadge(n.estado), celda(n.mensaje, 'recorte', n.mensaje)]);
+      return { clave: n.fecha + '|' + n.notaId + '|' + n.estado + '|' + n.hilo, tr: tr };
+    });
+    pintarTabla('notificaciones', filas, 4, 'Sin notificaciones todavía.');
+  }
+
+  function llenarPeriodos() {
+    var sel = $('sel-periodo');
+    var actual = sel.value;
+    var firma = periodos.map(function (p) { return p.id + p.estado; }).join();
+    if (sel.dataset.firma === firma) return;
+    sel.dataset.firma = firma;
+    sel.textContent = '';
+    periodos.forEach(function (p) { sel.appendChild(el('option', { value: p.id, text: p.nombre + ' (' + p.estado.toLowerCase() + ')' })); });
+    if (actual) sel.value = actual;
+    else { var abierto = periodos.filter(function (p) { return p.estado === 'ABIERTO'; })[0]; if (abierto) sel.value = abierto.id; }
+  }
+
+  function lista(r) { return r.ok && Array.isArray(r.datos) ? r.datos : null; }
+
+  function refrescar() {
+    return Promise.all([
+      api('GET', '/api/periodos'), api('GET', '/api/notas'), api('GET', '/api/solicitudes'),
+      api('GET', '/api/auditoria'), api('GET', '/api/notificaciones'), api('GET', '/api/notificaciones/simular-fallo')
+    ]).then(function (rs) {
+      var p = lista(rs[0]); if (p) { periodos = p; llenarPeriodos(); }
+      var n = lista(rs[1]); if (n) tablaNotas(n);
+      var s = lista(rs[2]); if (s) tablaSolicitudes(s);
+      var a = lista(rs[3]); if (a) tablaAuditoria(a);
+      var no = lista(rs[4]); if (no) tablaNotificaciones(no);
+      if (rs[5].ok && rs[5].datos && !$('interruptor').disabled) pintarFallo(!!rs[5].datos.activo);
+      $('punto').className = 'punto';
+      $('estado-texto').textContent = 'En vivo · ' + new Date().toLocaleTimeString('es-CO', { hour12: false });
+    }).catch(function () {
+      $('punto').className = 'punto caido';
+      $('estado-texto').textContent = 'Sin conexión con la API';
+    });
+  }
+
+  construirPasos();
+  refrescar();
+  setInterval(function () { if (!document.hidden && !ocupado) refrescar(); }, 2000);
+})();
+</script>
+</body>
+</html>
